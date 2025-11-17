@@ -195,7 +195,7 @@ async function main() {
         enableJsonResponse: true,
     });
     await mcpServer.connect(transport);
-    const port = Number(process.env.MCP_HTTP_PORT ?? "3333");
+    const port = Number(process.env.PORT ?? process.env.MCP_HTTP_PORT ?? "3333");
     const httpServer = createServer((req, res) => {
         const chunks = [];
         req.on("data", (chunk) => {
