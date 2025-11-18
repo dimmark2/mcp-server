@@ -8,14 +8,20 @@ const PGPORT = Number(process.env.PGPORT ?? "13403");
 const PGUSER = process.env.PGUSER ?? "postgres";
 const PGPASSWORD = process.env.PGPASSWORD ?? "qDJqEEbhMrQThzXAKRgtIFzFVKsHSaio";
 const PGDATABASE = process.env.PGDATABASE ?? "postgres";
-const pool = new Pool({
-    host: PGHOST,
-    port: PGPORT,
-    user: PGUSER,
-    password: PGPASSWORD,
-    database: PGDATABASE,
-    max: 5,
-});
+const poolConfig = process.env.DATABASE_URL !== undefined
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        max: 5,
+    }
+    : {
+        host: PGHOST,
+        port: PGPORT,
+        user: PGUSER,
+        password: PGPASSWORD,
+        database: PGDATABASE,
+        max: 5,
+    };
+const pool = new Pool(poolConfig);
 const mcpServer = new McpServer({ name: "postgres-schema-sql-http", version: "0.1.0" });
 mcpServer.registerTool("list_tables", {
     description: "List tables in the mcp_demo schema (or specified schema).",
@@ -182,6 +188,24 @@ mcpServer.registerTool("run_select", {
 });
 async function main() {
     try {
+        // eslint-disable-next-line no-console
+        console.error("Postgres env (sanitized) for HTTP MCP server:", {
+            PGHOST: process.env.PGHOST,
+            PGPORT: process.env.PGPORT,
+            PGUSER: process.env.PGUSER,
+            PGDATABASE: process.env.PGDATABASE,
+            HAS_PGPASSWORD: process.env.PGPASSWORD ? true : false,
+            HAS_DATABASE_URL: process.env.DATABASE_URL ? true : false,
+        });
+        // eslint-disable-next-line no-console
+        console.error("Postgres pool config (sanitized) for HTTP MCP server:", {
+            usingDatabaseUrl: process.env.DATABASE_URL ? true : false,
+            host: "host" in poolConfig ? poolConfig.host : undefined,
+            port: "port" in poolConfig ? poolConfig.port : undefined,
+            user: "user" in poolConfig ? poolConfig.user : undefined,
+            database: "database" in poolConfig ? poolConfig.database : undefined,
+            max: poolConfig.max,
+        });
         await pool.query("SELECT 1");
         // eslint-disable-next-line no-console
         console.error("HTTP MCP server: connected to Postgres at", `${PGHOST}:${PGPORT}/${PGDATABASE}`);
