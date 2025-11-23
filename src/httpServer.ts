@@ -27,21 +27,23 @@ const poolConfig =
 
 const pool = new Pool(poolConfig);
 
+const DEFAULT_SCHEMA = "df365";
+
 const mcpServer = new McpServer({ name: "postgres-schema-sql-http", version: "0.1.0" });
 
 mcpServer.registerTool(
   "list_tables",
   {
-    description: "List tables in the mcp_demo schema (or specified schema).",
+    description: "List tables in the df365 schema (or specified schema).",
     inputSchema: z.object({
       schema: z
         .string()
-        .describe("Postgres schema name. Defaults to mcp_demo.")
+        .describe("Postgres schema name. Defaults to df365.")
         .optional(),
     }),
   },
   async (args) => {
-    const schema = args.schema ?? "mcp_demo";
+    const schema = args.schema ?? DEFAULT_SCHEMA;
     const { rows } = await pool.query(
       `SELECT table_schema, table_name
        FROM information_schema.tables
@@ -71,13 +73,13 @@ mcpServer.registerTool(
         .describe("Table name to describe (without schema or with schema.table)."),
       schema: z
         .string()
-        .describe("Optional schema if table name is not qualified. Defaults to mcp_demo.")
+        .describe("Optional schema if table name is not qualified. Defaults to df365.")
         .optional(),
     }),
   },
   async (args) => {
     const tableArg = args.table;
-    const schemaArg = args.schema ?? "mcp_demo";
+    const schemaArg = args.schema ?? DEFAULT_SCHEMA;
 
     let schema = schemaArg;
     let table = tableArg;
@@ -118,7 +120,7 @@ mcpServer.registerTool(
         .describe("Table name to sample (without schema or with schema.table)."),
       schema: z
         .string()
-        .describe("Optional schema if table name is not qualified. Defaults to mcp_demo.")
+        .describe("Optional schema if table name is not qualified. Defaults to df365.")
         .optional(),
       limit: z
         .number()
@@ -128,7 +130,7 @@ mcpServer.registerTool(
   },
   async (args) => {
     const tableArg = args.table;
-    const schemaArg = args.schema ?? "mcp_demo";
+    const schemaArg = args.schema ?? DEFAULT_SCHEMA;
     let limit = args.limit ?? 10;
     if (!Number.isFinite(limit) || limit <= 0) limit = 10;
     if (limit > 100) limit = 100;
@@ -166,7 +168,7 @@ mcpServer.registerTool(
       sql: z
         .string()
         .describe(
-          "The SELECT SQL query to run. Must begin with SELECT and should reference tables in mcp_demo.",
+          "The SELECT SQL query to run. Must begin with SELECT and should reference tables in df365.",
         ),
       max_rows: z
         .number()
