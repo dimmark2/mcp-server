@@ -1,4 +1,4 @@
-import { createServer, IncomingMessage } from "node:http";
+import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
@@ -18,6 +18,42 @@ function logHttpRequest(req: IncomingMessage, parsedBody: unknown) {
     headers: sanitizedHeaders,
     body: parsedBody,
   });
+}
+
+function attachResponseLogger(res: ServerResponse) {
+  const originalWrite = res.write.bind(res);
+  const originalEnd = res.end.bind(res);
+  const chunks: Buffer[] = [];
+
+  res.write = function write(chunk: any, encoding?: any, cb?: any): boolean {
+    if (chunk !== undefined) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding ?? "utf8"));
+    }
+    return originalWrite(chunk as any, encoding as any, cb as any) as unknown as boolean;
+  };
+
+  res.end = function end(chunk?: any, encoding?: any, cb?: any) {
+    if (chunk !== undefined) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding ?? "utf8"));
+    }
+
+    const body = chunks.length > 0 ? Buffer.concat(chunks).toString("utf8") : undefined;
+    const headers = { ...res.getHeaders() };
+    if ("authorization" in headers) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      headers.authorization = "<redacted>";
+    }
+
+    // eslint-disable-next-line no-console
+    console.log("[http][response]", {
+      statusCode: res.statusCode,
+      headers,
+      body,
+    });
+
+    return originalEnd(chunk as any, encoding as any, cb as any);
+  };
 }
 
 const PGHOST = process.env.PGHOST ?? "centerbeam.proxy.rlwy.net";
@@ -291,6 +327,8 @@ async function main() {
 
   const httpServer = createServer((req, res) => {
     const chunks: Buffer[] = [];
+
+    attachResponseLogger(res);
 
     req.on("data", (chunk: Buffer) => {
       chunks.push(chunk);
