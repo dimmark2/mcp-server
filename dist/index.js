@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { Pool } from "pg";
+import { withToolLogging } from "./logging.js";
 const PGHOST = process.env.PGHOST ?? "centerbeam.proxy.rlwy.net";
 const PGPORT = Number(process.env.PGPORT ?? "13403");
 const PGUSER = process.env.PGUSER ?? "postgres";
@@ -31,7 +32,7 @@ server.registerTool("list_tables", {
             .describe("Postgres schema name. Defaults to df365.")
             .optional(),
     }),
-}, async (args) => {
+}, withToolLogging("list_tables", async (args) => {
     const schema = args.schema ?? DEFAULT_SCHEMA;
     const { rows } = await pool.query(`SELECT table_schema, table_name
        FROM information_schema.tables
@@ -45,7 +46,7 @@ server.registerTool("list_tables", {
             },
         ],
     };
-});
+}));
 server.registerTool("describe_table", {
     description: "Describe columns for a given table (name and type).",
     inputSchema: z.object({
@@ -57,7 +58,7 @@ server.registerTool("describe_table", {
             .describe("Optional schema if table name is not qualified. Defaults to df365.")
             .optional(),
     }),
-}, async (args) => {
+}, withToolLogging("describe_table", async (args) => {
     const tableArg = args.table;
     const schemaArg = args.schema ?? DEFAULT_SCHEMA;
     let schema = schemaArg;
@@ -81,7 +82,7 @@ server.registerTool("describe_table", {
             },
         ],
     };
-});
+}));
 server.registerTool("sample_rows", {
     description: "Return a small sample of rows from a table.",
     inputSchema: z.object({
@@ -97,7 +98,7 @@ server.registerTool("sample_rows", {
             .describe("Maximum sample size (default 10, max 100).")
             .optional(),
     }),
-}, async (args) => {
+}, withToolLogging("sample_rows", async (args) => {
     const tableArg = args.table;
     const schemaArg = args.schema ?? DEFAULT_SCHEMA;
     let limit = args.limit ?? 10;
@@ -124,7 +125,7 @@ server.registerTool("sample_rows", {
             },
         ],
     };
-});
+}));
 server.registerTool("run_select", {
     description: "Execute a read-only SELECT query against Postgres. The query must start with SELECT and cannot modify data.",
     inputSchema: z.object({
@@ -136,7 +137,7 @@ server.registerTool("run_select", {
             .describe("Maximum number of rows to return (default 100, max 500).")
             .optional(),
     }),
-}, async (args) => {
+}, withToolLogging("run_select", async (args) => {
     const sqlRaw = args.sql.trim();
     let maxRows = args.max_rows ?? 100;
     if (!Number.isFinite(maxRows) || maxRows <= 0)
@@ -185,7 +186,7 @@ server.registerTool("run_select", {
             },
         ],
     };
-});
+}));
 async function main() {
     try {
         // eslint-disable-next-line no-console

@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import { Pool } from "pg";
+import { withToolLogging } from "./logging.js";
 
 const PGHOST = process.env.PGHOST ?? "centerbeam.proxy.rlwy.net";
 const PGPORT = Number(process.env.PGPORT ?? "13403");
@@ -42,7 +43,7 @@ mcpServer.registerTool(
         .optional(),
     }),
   },
-  async (args) => {
+  withToolLogging("list_tables", async (args) => {
     const schema = args.schema ?? DEFAULT_SCHEMA;
     const { rows } = await pool.query(
       `SELECT table_schema, table_name
@@ -60,7 +61,7 @@ mcpServer.registerTool(
         },
       ],
     };
-  },
+  }),
 );
 
 mcpServer.registerTool(
@@ -77,7 +78,7 @@ mcpServer.registerTool(
         .optional(),
     }),
   },
-  async (args) => {
+  withToolLogging("describe_table", async (args) => {
     const tableArg = args.table;
     const schemaArg = args.schema ?? DEFAULT_SCHEMA;
 
@@ -107,7 +108,7 @@ mcpServer.registerTool(
         },
       ],
     };
-  },
+  }),
 );
 
 mcpServer.registerTool(
@@ -128,7 +129,7 @@ mcpServer.registerTool(
         .optional(),
     }),
   },
-  async (args) => {
+  withToolLogging("sample_rows", async (args) => {
     const tableArg = args.table;
     const schemaArg = args.schema ?? DEFAULT_SCHEMA;
     let limit = args.limit ?? 10;
@@ -156,7 +157,7 @@ mcpServer.registerTool(
         },
       ],
     };
-  },
+  }),
 );
 
 mcpServer.registerTool(
@@ -176,7 +177,7 @@ mcpServer.registerTool(
         .optional(),
     }),
   },
-  async (args) => {
+  withToolLogging("run_select", async (args) => {
     const sqlRaw = args.sql.trim();
     let maxRows = args.max_rows ?? 100;
     if (!Number.isFinite(maxRows) || maxRows <= 0) maxRows = 100;
@@ -232,7 +233,7 @@ mcpServer.registerTool(
         },
       ],
     };
-  },
+  }),
 );
 
 async function main() {
