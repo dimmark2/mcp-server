@@ -1,9 +1,22 @@
-import { createServer } from "node:http";
+import { createServer, IncomingMessage } from "node:http";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import { Pool } from "pg";
 import { withToolLogging } from "./logging.js";
+function logHttpRequest(req, parsedBody) {
+    const sanitizedHeaders = { ...req.headers };
+    if ("authorization" in sanitizedHeaders) {
+        sanitizedHeaders.authorization = "<redacted>";
+    }
+    // eslint-disable-next-line no-console
+    console.log("[http][request]", {
+        method: req.method,
+        url: req.url,
+        headers: sanitizedHeaders,
+        body: parsedBody,
+    });
+}
 const PGHOST = process.env.PGHOST ?? "centerbeam.proxy.rlwy.net";
 const PGPORT = Number(process.env.PGPORT ?? "13403");
 const PGUSER = process.env.PGUSER ?? "postgres";
@@ -243,6 +256,7 @@ async function main() {
                     }
                 }
             }
+            logHttpRequest(req, parsedBody);
             try {
                 await transport.handleRequest(req, res, parsedBody);
             }
