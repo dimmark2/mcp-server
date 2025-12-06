@@ -62,6 +62,7 @@ const PGUSER = process.env.PGUSER ?? "postgres";
 const PGPASSWORD = process.env.PGPASSWORD ?? "qDJqEEbhMrQThzXAKRgtIFzFVKsHSaio";
 const PGDATABASE = process.env.PGDATABASE ?? "postgres";
 
+// All tools assume tables live in this schema; set search_path accordingly.
 const poolConfig =
   process.env.DATABASE_URL !== undefined
     ? {
@@ -80,6 +81,14 @@ const poolConfig =
 const pool = new Pool(poolConfig);
 
 const DEFAULT_SCHEMA = "df365";
+const DEFAULT_SCHEMA_QUOTED = `"${DEFAULT_SCHEMA.replace(/"/g, '""')}"`;
+
+// Ensure unqualified table references resolve to df365.
+pool.on("connect", (client) => {
+  client
+    .query(`SET search_path TO ${DEFAULT_SCHEMA_QUOTED}`)
+    .catch((err) => console.error("Failed to set search_path for client", err));
+});
 
 const mcpServer = new McpServer({ name: "postgres-schema-sql-http", version: "0.1.0" });
 
